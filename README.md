@@ -1,8 +1,8 @@
 # ProsopyBase
 
-Raw data, error correction, and preprocessing pipeline for the **ProsoBAB** Neo-Babylonian prosopography database.
+Raw data, error correction, and preprocessing pipeline for the **Prosobab** Neo-Babylonian prosopography database.
 
-This repository is the foundational data layer for the ProsopyEstimation and ProsopyWitness projects. It produces a clean, standardized attestation dataset (`preprocessed_whole_data.csv`) that downstream analyses build on.
+This repository is the foundational data layer for the ProsopyEstimation and other projects. It produces a clean, standardized attestation dataset (`preprocessed_whole_data.csv`) that downstream analyses build on.
 
 ---
 
@@ -12,7 +12,7 @@ This repository is the foundational data layer for the ProsopyEstimation and Pro
 ProsopyBase/
 ├── data/
 │   ├── raw/
-│   │   └── initial_prosobab_data.csv          # Raw export from ProsoBAB database
+│   │   └── initial_prosobab_data.csv          # Raw export from Prosobab database
 │   ├── corrections/
 │   │   ├── final-fixes.csv                    # 25 documented date corrections
 │   │   ├── unique_kings_verification.csv      # Known regnal year ranges (from eBL)
@@ -32,7 +32,7 @@ ProsopyBase/
 ## Data Description
 
 ### `data/raw/initial_prosobab_data.csv`
-The raw export from the [ProsoBAB database](https://prosobab.leidenuniv.nl/) — a prosopography of individuals attested in Neo-Babylonian and Achaemenid-period legal documents (c. 625–330 BCE). Each row is one attestation of one person in one tablet.
+The raw export from the [Prosobab database](https://prosobab.leidenuniv.nl/) — a prosopography of individuals attested in Neo-Babylonian and Achaemenid-period legal documents (c. 625–330 BCE). Each row is one attestation of one person in one tablet.
 
 Key columns: `PID`, `Tablet ID`, `Julian date`, `Date`, `Role`, `ind.Name`, `ind.Patronym`, `ind.Family name`, `Archive`, `Place of writing`
 
@@ -118,14 +118,7 @@ print(df[df['Tablet ID'] == 432]['Split_Julian_dates'].unique())
 
 ---
 
-## Downstream Projects
-
-- **ProsopyEstimation** — date estimation for undated tablets, using `preprocessed_whole_data.csv` as input
-- **ProsopyWitness** — co-witness network analysis, using `preprocessed_whole_data.csv` as input
-
----
-
 ## Data Source
 
-ProsoBAB: Prosopography of Babylonia, c. 625–330 BCE
-[https://prosobab.leidenuniv.nl/](https://prosobab.leidenuniv.nl/)
+Waerzeggers, C., Groß, M., et al. (2019). Prosobab: Prosopography of Babylonia (c. 620–330 BCE). Leiden University. https://prosobab.leidenuniv.nl.
+Waerzeggers, C., & Groß, M. (2022). Prosobab (version 1.0). DANS Data Station Archaeology. https://doi.org/10.17026/dans-zvn-eece.
