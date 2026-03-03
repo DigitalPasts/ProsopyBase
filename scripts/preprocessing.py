@@ -20,6 +20,8 @@ Decisions tracking:
       which is not relevant for prosopographical analysis; they are not treated as errors.
 """
 
+import re
+
 import pandas as pd
 
 from helpers import get_fully_dated_rows_by_julian
@@ -165,6 +167,71 @@ def inconsistencies_by_king(data_df):
     )
 
 
+def fill_julian_from_babylonian(df):
+    """
+    Recovers Julian dates for tablets whose Julian date field is missing or unparseable
+    but whose Babylonian date contains a clear (unbracketed) regnal year and whose
+    attestation list includes a king with a known start year.
+
+    Formula: julian_year = king_start_year - (regnal_year - 1)
+    This is the same formula used by verify_julian_date() for cross-checking.
+
+    Tablets with regnal year 0 (accession year) are included: the formula yields
+    king_start_year + 1, which corresponds to the transition / accession year.
+
+    Fills Split_Julian_dates in-place for all rows belonging to recovered tablets.
+    Saves a report to data/corrections/babylonian_date_fills.csv.
+
+    :param df: DataFrame after initial Julian date extraction (Split_Julian_dates may have NaN)
+    :return: DataFrame with recovered Julian dates filled in
+    """
+    kings = pd.read_csv('../data/corrections/unique_kings_verification.csv')
+    kings = kings.dropna(subset=['start_year'])
+    kings_dict = kings.set_index('PID')['start_year'].astype(int).to_dict()
+
+    def parse_regnal_year(date_str):
+        """Return the regnal year integer if the year part is an unbracketed integer, else None."""
+        if pd.isna(date_str) or str(date_str).strip() == '-':
+            return None
+        parts = str(date_str).strip().split('.')
+        if len(parts) < 3:
+            return None
+        year_token = parts[2].strip().split()[0] if parts[2].strip() else ''
+        return int(year_token) if re.match(r'^\d+$', year_token) else None
+
+    recoveries = []
+    for tab_id, group in df[df['Split_Julian_dates'].isna()].groupby('Tablet ID'):
+        regnal_year = parse_regnal_year(group['Date'].iloc[0])
+        if regnal_year is None:
+            continue
+        king_rows = group[group['Role'].str.contains('king in', na=False)]
+        if king_rows.empty:
+            continue
+        king_pid_str = king_rows['PID'].iloc[0]
+        if not str(king_pid_str).isdigit():
+            continue
+        king_pid = int(king_pid_str)
+        if king_pid not in kings_dict:
+            continue
+        start_year = kings_dict[king_pid]
+        calc_julian = start_year - (regnal_year - 1)
+        df.loc[df['Tablet ID'] == tab_id, 'Split_Julian_dates'] = str(calc_julian)
+        recoveries.append({
+            'Tablet ID': tab_id,
+            'Babylonian Date': group['Date'].iloc[0],
+            'King PID': king_pid,
+            'Regnal Year': regnal_year,
+            'King Start Year (BCE)': start_year,
+            'Calculated Julian Year (BCE)': calc_julian,
+        })
+
+    report_df = pd.DataFrame(recoveries)
+    report_df.to_csv('../data/corrections/babylonian_date_fills.csv', index=False)
+    print(f"  Recovered Julian dates from Babylonian calendar: {len(report_df)} tablets")
+    print(f"  Report saved to data/corrections/babylonian_date_fills.csv")
+    return df
+
+
 def preprocess():
     """
     Main preprocessing pipeline. Reads the raw ProsoBAB export, normalizes it,
@@ -179,7 +246,11 @@ def preprocess():
     df['Split_Julian_dates'] = df['Split_Julian_dates'].str.extract(r'^(\d{3,4})$')
     df = df[df['PID'].str.isdigit()].copy()
 
+    # recover Julian dates calculable from Babylonian date + king regnal year
+    df = fill_julian_from_babylonian(df)
+
     # apply documented date corrections (see data/corrections/final-fixes.csv)
+    # corrections override any calculated dates above
     # diagnostic checks (commented out - run manually to regenerate diagnostic outputs):
     # dup_attestations(df)
     # inconsistencies_by_king(df)
